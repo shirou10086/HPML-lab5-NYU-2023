@@ -102,6 +102,10 @@ int main(int argc, char *argv[]) {
     free(it);
     free(ot);
     free(f);
-
+    double checksum = 0.0;
+    for (int i = 0; i < K * H * W; ++i) {
+        checksum += ot[i];
+    }
+    printf("Checksum: %lf\n", checksum);
     return 0;
 }
