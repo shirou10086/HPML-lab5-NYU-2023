@@ -105,8 +105,8 @@ int main() {
     cout << "Checksum: " << checksum << endl;
 
     // Report execution time
-    duration<double> duration = duration_cast<duration<double>>(stop - start);
-    cout << "Execution Time: " << duration.count() << " seconds" << endl;
+    duration<double> kernelDuration = duration_cast<duration<double>>(stop - start);
+    cout << "Execution Time: " << kernelDuration.count() << " seconds" << endl;
 
     // Free resources
     cudaFree(I);
