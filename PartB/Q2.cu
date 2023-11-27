@@ -62,7 +62,7 @@ int main() {
         cudaDeviceSynchronize();
         end = std::chrono::high_resolution_clock::now();
         std::cout << "K = " << K << ", " << num_blocks << " Blocks, 256 Threads/Block, Time: "
-                  << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
+                  << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " ms" << std::endl;
 
         cudaMemcpy(host_c, device_c, size * sizeof(int), cudaMemcpyDeviceToHost);
 
