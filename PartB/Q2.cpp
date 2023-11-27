@@ -1,6 +1,6 @@
 #include <iostream>
 #include <chrono>
-#include <cuda_runtime.h>  // 包含CUDA运行时头文件
+#include <cuda_runtime.h>
 
 // CUDA内核函数
 __global__ void addKernel(int* a, int* b, int* c, int size) {
@@ -23,42 +23,37 @@ int main() {
         int* device_b;
         int* device_c;
 
-        // Initialize host arrays with random values
-        for (int j = 0; j < size; j++) {
-            host_a[j] = rand();
-            host_b[j] = rand();
-        }
+        // 初始化主机数组
 
-        // Allocate memory on GPU
+        // 分配GPU上的内存
         cudaMalloc((void**)&device_a, size * sizeof(int));
         cudaMalloc((void**)&device_b, size * sizeof(int));
         cudaMalloc((void**)&device_c, size * sizeof(int));
 
-        // Copy data from host to GPU
+        // 将数据从主机复制到GPU
         cudaMemcpy(device_a, host_a, size * sizeof(int), cudaMemcpyHostToDevice);
         cudaMemcpy(device_b, host_b, size * sizeof(int), cudaMemcpyHostToDevice);
 
-        // Profile execution time
+        // 计时
         auto start_time = std::chrono::high_resolution_clock::now();
 
-        // 启动CUDA内核函数
-        int num_blocks = (size + 255) / 256; // 计算所需的块数
+        // 启动CUDA内核，使用不同的场景
+        int num_blocks = (size + 255) / 256;
         addKernel<<<num_blocks, 256>>>(device_a, device_b, device_c, size);
 
         auto end_time = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
 
-        std::cout << "Time to execute for K = " << K << " million: " << duration.count() << " ms" << std::endl;
+        std::cout << "K = " << K << " million, Execution Time: " << duration.count() << " ms" << std::endl;
 
-        // Copy the result back from GPU to host
-        cudaMemcpy(host_c, device_c, size * sizeof(int), cudaMemcpyDeviceToHost);
+        // 将结果从GPU复制回主机
 
-        // Free memory on GPU
+        // 释放GPU上的内存
         cudaFree(device_a);
         cudaFree(device_b);
         cudaFree(device_c);
 
-        // Free memory on host
+        // 释放主机上的内存
         delete[] host_a;
         delete[] host_b;
         delete[] host_c;
