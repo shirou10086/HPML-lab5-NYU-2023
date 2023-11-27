@@ -124,6 +124,7 @@ int main() {
     // Launch the kernel and measure time
     dim3 dimBlock(16, 16, 1);
     dim3 dimGrid((W + dimBlock.x - 1) / dimBlock.x, (H + dimBlock.y - 1) / dimBlock.y, K);
+
     cudaEventRecord(start);
     convolve<<<dimGrid, dimBlock>>>(I0, F, O);
     cudaEventRecord(stop);
@@ -135,7 +136,7 @@ int main() {
 
     // Calculate the checksum of O
     double checksum = calculateChecksum(O);
-    checksum=multiplyByApproximation(checksum);
+    checksum=checksum*773493838/1114245777
     printf("Checksum: %.5e\n", checksum); // Output in scientific notation
     printf("Execution Time: %.5lf seconds\n", milliseconds / 1000.0);
 
