@@ -42,7 +42,7 @@ int main() {
         cudaDeviceSynchronize();
         auto end = std::chrono::high_resolution_clock::now();
         std::cout << "K = " << K << ", 1 Block, 1 Thread, Time: "
-                  << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
+                  << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " ms" << std::endl;
 
         // Scenario 2: One block with 256 threads
         num_blocks = 1;
@@ -52,7 +52,7 @@ int main() {
         cudaDeviceSynchronize();
         end = std::chrono::high_resolution_clock::now();
         std::cout << "K = " << K << ", 1 Block, 256 Threads, Time: "
-                  << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
+                  << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " ms" << std::endl;
 
         // Scenario 3: Multiple blocks with 256 threads per block
         num_threads_per_block = 256;
