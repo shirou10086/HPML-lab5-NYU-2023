@@ -15,6 +15,10 @@ clean:
 	rm -f $(EXECS) *.o
 
 #######################################################################
+tar:
+	tar -cvf YourNameCUDA1.tar Makefile *.h *.cu *.pdf *.txt vecaddKernel01.cu matmultKernel01.cu
+
+#######################################################################
 timer.o : timer.cu timer.h
 	$(NVCC) $< -c -o $@ $(OPTIONS)
 
