@@ -78,6 +78,18 @@ void initializeTensors(double* I, double* F, double* I0) {
     }
 }
 
+double calculateChecksum(double* O) {
+    double checksum = 0.0;
+    for (int k = 0; k < K; ++k) {
+        for (int x = 0; x < W; ++x) {
+            for (int y = 0; y < H; ++y) {
+                checksum += O[k * W * H + x * H + y];
+            }
+        }
+    }
+    return checksum;
+}
+
 int main() {
     double *I, *F, *I0, *O;
 
