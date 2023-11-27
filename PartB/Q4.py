@@ -1,38 +1,37 @@
 import matplotlib.pyplot as plt
-import numpy as np
 
 # Values of K in million
 K_values = [1, 5, 10, 50, 100]
 
-# Execution times for Step 2 (without Unified Memory) for each K value
-step2_times = [2.34, 12.3, 24.6, 123.4, 246.8]  # Replace with your actual data
+# Execution times for Q1, Q2, and Q3 (in milliseconds)
+q1_times = [4, 20, 41, 205, 409]
+q2_times = [0, 0, 0, 0, 1]
+q3_times = [0, 0, 0, 0, 0]
 
-# Execution times for Step 3 (with Unified Memory) for each K value
-step3_times = [1.23, 6.2, 12.4, 62.0, 124.0]  # Replace with your actual data
-
-# Execution times on CPU only for each K value
-cpu_times = [0.5, 2.5, 5.0, 25.0, 50.0]  # Replace with your actual data
-
-# Create log-log scale plots
+# Create a log-log scale plot for Q1
 plt.figure(figsize=(10, 6))
-
-# Plot Step 2 execution times
-plt.loglog(K_values, step2_times, marker='o', label='Step 2 (without Unified Memory)')
-
-# Plot Step 3 execution times
-plt.loglog(K_values, step3_times, marker='o', label='Step 3 (with Unified Memory)')
-
-# Plot CPU execution times for reference
-plt.loglog(K_values, cpu_times, marker='o', label='CPU Only')
-
-# Set labels and title
+plt.plot(K_values, q1_times, marker='o', label='Q1 (Step 2)')
+plt.plot(K_values, q3_times, marker='o', label='Q3 (Step 3 with Unified Memory)')
+plt.yscale('log')
+plt.xscale('log')
 plt.xlabel('K (Million)')
-plt.ylabel('Execution Time (ms)')
-plt.title('Execution Time vs. K for Step 2 and Step 3')
-
-# Add legend
+plt.ylabel('Time (ms)')
+plt.title('Execution Time Comparison (Step 2 vs. Step 3 with Unified Memory)')
 plt.legend()
-
-# Show the plot
 plt.grid(True)
+plt.savefig('q4_q1_vs_q3.png')
+plt.show()
+
+# Create a log-log scale plot for Q2
+plt.figure(figsize=(10, 6))
+plt.plot(K_values, q2_times, marker='o', label='Q2 (Step 2 with GPU)')
+plt.plot(K_values, q3_times, marker='o', label='Q3 (Step 3 with Unified Memory)')
+plt.yscale('log')
+plt.xscale('log')
+plt.xlabel('K (Million)')
+plt.ylabel('Time (ms)')
+plt.title('Execution Time Comparison (Step 2 with GPU vs. Step 3 with Unified Memory)')
+plt.legend()
+plt.grid(True)
+plt.savefig('q4_q2_vs_q3.png')
 plt.show()
