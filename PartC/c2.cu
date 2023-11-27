@@ -40,7 +40,7 @@ __global__ void convolutionKernel(const float *I_padded, const float *F_flipped,
 __global__ void convolutionKernelTiled(const float* I_padded, const float* F, float* O) {
     int k = blockIdx.z * blockDim.z + threadIdx.z; //same as above
     int x = blockIdx.y * blockDim.y + threadIdx.y;
-    int y = blockIdx.x * blockDim.x + threadIdx.x; 
+    int y = blockIdx.x * blockDim.x + threadIdx.x;
 
     __shared__ float tile[TILE_WIDTH + FH - 1][TILE_WIDTH + FW - 1];
 
@@ -70,7 +70,7 @@ __global__ void convolutionKernelTiled(const float* I_padded, const float* F, fl
     __syncthreads();
 }
 
-void runConvolution(const float *I, const float *F, float *O) {
+void runTiledConvolution(const float *I, const float *F, float *O) {
     float *d_I_padded, *d_F_flipped, *d_O;
     size_t size_I_padded = C * H_padded * W_padded * sizeof(float);
     size_t size_F_flipped = K * C * FH * FW * sizeof(float);
@@ -116,21 +116,23 @@ void runConvolution(const float *I, const float *F, float *O) {
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
-    cudaEventRecord(start);
-
+    cudaEventRecord(start,0);
+    // Launch the tiled convolution kernel
     convolutionKernelTiled<<<blocksPerGrid, threadsPerBlock>>>(d_I_padded, d_F_flipped, d_O);
 
-    cudaDeviceSynchronize();
-
-    cudaEventRecord(stop);
+    // Record the stop event
+    cudaEventRecord(stop, 0);
     cudaEventSynchronize(stop);
 
+    // Calculate the elapsed time
     float milliseconds = 0;
     cudaEventElapsedTime(&milliseconds, start, stop);
-    printf("Kernel execution time: %f milliseconds\n", milliseconds);
+    printf("Tiled convolution kernel execution time: %f milliseconds\n", milliseconds);
 
+    // Destroy the events
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
+
 
     cudaMemcpy(O, d_O, size_O, cudaMemcpyDeviceToHost);
 
@@ -167,8 +169,9 @@ int main() {
     int gridY = (H_out + TILE_WIDTH - 1) / TILE_WIDTH;
     dim3 gridDim(gridX, gridY, K);
 
-    runConvolution(I, F, O);
+    runTiledConvolution(I, F, O);
 
+    // Calculate and print the checksum
     float checksum = 0;
     for (int k = 0; k < K; ++k) {
         for (int h = 0; h < H_out; ++h) {
@@ -177,7 +180,8 @@ int main() {
             }
         }
     }
-    printf("Checksum of the output tensor O: %f\n", checksum);
+    printf("Checksum of the tiled output tensor O: %f\n", checksum);
+
 
     int hold;
     scanf("%d", &hold);
