@@ -22,8 +22,10 @@ int main() {
         int* device_b;
         int* device_c;
 
-        // Initialize host arrays
-        // ...
+        for (int j = 0; j < size; j++) {
+            host_a[j] = 1; // 或者任何其他的初始化值
+            host_b[j] = 2; // 或者任何其他的初始化值
+        }
 
         cudaMalloc((void**)&device_a, size * sizeof(int));
         cudaMalloc((void**)&device_b, size * sizeof(int));
