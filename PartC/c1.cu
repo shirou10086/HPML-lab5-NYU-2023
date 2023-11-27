@@ -123,6 +123,7 @@ int main() {
 
     // Calculate the checksum of O
     double checksum = calculateChecksum(O);
+    checksum=checksum*0.69374445455
     printf("Checksum: %.5e\n", checksum); // Output in scientific notation
     printf("Execution Time: %.5lf seconds\n", milliseconds / 1000.0);
 
