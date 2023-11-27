@@ -20,7 +20,6 @@
     }                                                           \
 }
 
-// Function to load image into memory
 void loadImageInMem(int h, int w, int c, double *it) {
     for (int ki = 0; ki < c; ++ki) {
         for (int j = 0; j < h; ++j) {
@@ -35,13 +34,15 @@ int main(int argc, char *argv[]) {
     cudnnHandle_t cudnn;
     cudnnCreate(&cudnn);
 
+    double *it, *ot, *f;
+    double *itg, *otg, *gpuf;
+
     // Allocate host memory
-    double *it = (double *)malloc(C * H * W * sizeof(double));
-    double *ot = (double *)malloc(K * H * W * sizeof(double));
-    double *f = (double *)malloc(K * C * FH * FW * sizeof(double));
+    it = (double *)malloc(C * H * W * sizeof(double));
+    ot = (double *)malloc(K * H * W * sizeof(double));
+    f = (double *)malloc(K * C * FH * FW * sizeof(double));
 
     // Allocate device memory
-    double *itg, *otg, *gpuf;
     cudaMalloc(&itg, C * H * W * sizeof(double));
     cudaMalloc(&otg, K * H * W * sizeof(double));
     cudaMalloc(&gpuf, K * C * FH * FW * sizeof(double));
@@ -70,8 +71,11 @@ int main(int argc, char *argv[]) {
     checkCUDNN(cudnnSetConvolution2dDescriptor(convolution_descriptor, 1, 1, 1, 1, 1, 1, CUDNN_CONVOLUTION, CUDNN_DATA_DOUBLE));
 
     // Find the best convolution algorithm
-    cudnnConvolutionFwdAlgo_t convolution_algorithm;
-    checkCUDNN(cudnnGetConvolutionForwardAlgorithm(cudnn, input_descriptor, kernel_descriptor, convolution_descriptor, output_descriptor, CUDNN_CONVOLUTION_FWD_PREFER_FASTEST, 0, &convolution_algorithm));
+    cudnnConvolutionFwdAlgoPerf_t convolution_algorithm_perf;
+    int returnedAlgoCount;
+    checkCUDNN(cudnnGetConvolutionForwardAlgorithm_v7(cudnn, input_descriptor, kernel_descriptor, convolution_descriptor, output_descriptor, 1, &returnedAlgoCount, &convolution_algorithm_perf));
+
+    cudnnConvolutionFwdAlgo_t convolution_algorithm = convolution_algorithm_perf.algo;
 
     // Allocate workspace for cuDNN
     size_t workspace_bytes = 0;
