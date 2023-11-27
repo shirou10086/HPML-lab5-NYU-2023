@@ -1,7 +1,10 @@
+#include <iostream>
+#include <chrono>
 #include <cuda_runtime.h>
-#include <stdio.h>
 
-// Macro definitions
+using namespace std;
+using namespace std::chrono;
+
 #define H 1024
 #define W 1024
 #define C 3
@@ -9,126 +12,107 @@
 #define FH 3
 #define K 64
 #define P 1
-#define H_padded (H + 2 * P)
-#define W_padded (W + 2 * P)
-#define H_out (H + 2 * P - FH + 1)
-#define W_out (W + 2 * P - FW + 1)
-#define TILE_WIDTH 16
 
-// CUDA kernel for convolution without tiling
-__global__ void convolutionKernel(const double *I_padded, const double *F_flipped, double *O) {
-    int k = blockIdx.z * blockDim.z + threadIdx.z; // Depth
-    int x = blockIdx.y * blockDim.y + threadIdx.y; // Row
-    int y = blockIdx.x * blockDim.x + threadIdx.x; // Column
+__global__ void convolve(double* I0, double* F, double* O) {
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+    int k = blockIdx.z * blockDim.z + threadIdx.z;
 
-    if (k >= K || x >= H_out || y >= W_out) return;
-
-    double result = 0.0;
-    for (int c = 0; c < C; c++) {
-        for (int i = 0; i < FH; i++) {
-            for (int j = 0; j < FW; j++) {
-                int ix = x + i;
-                int iy = y + j;
-                int inputIndex = (c * H_padded + ix) * W_padded + iy;
-                int filterIndex = ((k * C + c) * FH + i) * FW + j;
-                result += I_padded[inputIndex] * F_flipped[filterIndex];
+    if (x < W && y < H && k < K) {
+        double sum = 0.0;
+        for (int c = 0; c < C; ++c) {
+            for (int i = 0; i < FW; ++i) {
+                for (int j = 0; j < FH; ++j) {
+                    sum += F[k * C * FH * FW + c * FH * FW + (FW - 1 - i) * FH + (FH - 1 - j)] *
+                           I0[c * (W + 2 * P) * (H + 2 * P) + (x + i) * (H + 2 * P) + (y + j)];
+                }
             }
         }
+        O[k * W * H + x * H + y] = sum;
     }
-    O[(k * H_out + x) * W_out + y] = result;
 }
 
-// Function to initialize input and filters
-void initialize(double *I, double *F) {
-    // Initialize the input tensor
+void initializeTensors(double* I, double* F, double* I0) {
+    // Initialize I
     for (int c = 0; c < C; ++c) {
-        for (int h = 0; h < H; ++h) {
-            for (int w = 0; w < W; ++w) {
-                I[(c * H + h) * W + w] = c * (h + w);
+        for (int x = 0; x < W; ++x) {
+            for (int y = 0; y < H; ++y) {
+                I[c * W * H + x * H + y] = c * (x + y);
             }
         }
     }
 
-    // Initialize the filters
+    // Initialize F
     for (int k = 0; k < K; ++k) {
         for (int c = 0; c < C; ++c) {
             for (int i = 0; i < FH; ++i) {
                 for (int j = 0; j < FW; ++j) {
-                    F[((k * C + c) * FH + i) * FW + j] = (c + k) * (i + j);
+                    F[k * C * FH * FW + c * FH * FW + i * FW + j] = (c + k) * (i + j);
+                }
+            }
+        }
+    }
+
+    // Initialize I0 with padding
+    for (int c = 0; c < C; ++c) {
+        for (int x = 0; x < W + 2 * P; ++x) {
+            for (int y = 0; y < H + 2 * P; ++y) {
+                if (x == 0 || y == 0 || x == W + 2 * P - 1 || y == H + 2 * P - 1) {
+                    I0[c * (W + 2 * P) * (H + 2 * P) + x * (H + 2 * P) + y] = 0;
+                } else {
+                    I0[c * (W + 2 * P) * (H + 2 * P) + x * (H + 2 * P) + y] = I[c * W * H + (x - 1) * H + (y - 1)];
                 }
             }
         }
     }
 }
 
-// Main program
-int main() {
-    double *I = (double *)malloc(C * H * W * sizeof(double));
-    double *F = (double *)malloc(K * C * FH * FW * sizeof(double));
-    double *O = (double *)malloc(K * H_out * W_out * sizeof(double));
-
-    // Initialize data
-    initialize(I, F);
-
-    double *d_I_padded, *d_F_flipped, *d_O;
-    cudaMalloc(&d_I_padded, C * H_padded * W_padded * sizeof(double));
-    cudaMalloc(&d_F_flipped, K * C * FH * FW * sizeof(double));
-    cudaMalloc(&d_O, K * H_out * W_out * sizeof(double));
-
-    // Copy data from host to device
-    cudaMemcpy(d_I_padded, I, C * H_padded * W_padded * sizeof(double), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_F_flipped, F, K * C * FH * FW * sizeof(double), cudaMemcpyHostToDevice);
-
-    // Define kernel launch parameters
-    dim3 blockDim(TILE_WIDTH, TILE_WIDTH, 1);
-    dim3 gridDim((W_out + TILE_WIDTH - 1) / TILE_WIDTH, (H_out + TILE_WIDTH - 1) / TILE_WIDTH, K);
-
-    // Create CUDA events for timing
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-    cudaEventRecord(start);
-
-    // Launch the kernel
-    convolutionKernel<<<gridDim, blockDim>>>(d_I_padded, d_F_flipped, d_O);
-    cudaDeviceSynchronize();
-
-    // Stop timing
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-
-    // Calculate elapsed time
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
-    printf("Kernel execution time: %f milliseconds\n", milliseconds);
-
-    // Destroy CUDA events
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
-
-    // Copy result back to host
-    cudaMemcpy(O, d_O, K * H_out * W_out * sizeof(double), cudaMemcpyDeviceToHost);
-
-    // Calculate checksum
-    double checksum = 0;
+double calculateChecksum(double* O) {
+    double checksum = 0.0;
     for (int k = 0; k < K; ++k) {
-        for (int h = 0; h < H_out; ++h) {
-            for (int w = 0; w < W_out; ++w) {
-                checksum += O[(k * H_out + h) * W_out + w];
+        for (int x = 0; x < W; ++x) {
+            for (int y = 0; y < H; ++y) {
+                checksum += O[k * W * H + x * H + y];
             }
         }
     }
-    printf("Checksum: %lf\n", checksum);
+    return checksum;
+}
 
-    // Free device memory
-    cudaFree(d_I_padded);
-    cudaFree(d_F_flipped);
-    cudaFree(d_O);
+int main() {
+    double *I, *F, *I0, *O;
 
-    // Free host memory
-    free(I);
-    free(F);
-    free(O);
+    // Allocate Unified Memory – accessible from CPU or GPU
+    cudaMallocManaged(&I, C * W * H * sizeof(double));
+    cudaMallocManaged(&F, K * C * FH * FW * sizeof(double));
+    cudaMallocManaged(&I0, C * (W + 2 * P) * (H + 2 * P) * sizeof(double));
+    cudaMallocManaged(&O, K * W * H * sizeof(double));
+
+    // Initialize tensors
+    initializeTensors(I, F, I0);
+
+    // Launch the kernel
+    dim3 dimBlock(16, 16, 1);
+    dim3 dimGrid((W + dimBlock.x - 1) / dimBlock.x, (H + dimBlock.y - 1) / dimBlock.y, K);
+
+    auto start = high_resolution_clock::now();
+    convolve<<<dimGrid, dimBlock>>>(I0, F, O);
+    cudaDeviceSynchronize();
+    auto stop = high_resolution_clock::now();
+
+    // Calculate the checksum of O
+    double checksum = calculateChecksum(O);
+    cout << "Checksum: " << checksum << endl;
+
+    // Report execution time
+    duration<double> duration = duration_cast<duration<double>>(stop - start);
+    cout << "Execution Time: " << duration.count() << " seconds" << endl;
+
+    // Free resources
+    cudaFree(I);
+    cudaFree(F);
+    cudaFree(I0);
+    cudaFree(O);
 
     return 0;
 }
