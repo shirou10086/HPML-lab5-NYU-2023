@@ -3,6 +3,7 @@
 #include <iostream>
 #include <chrono>
 #include <cmath> // For pow function
+#include <c4> // For pow function
 using namespace std;
 using namespace std::chrono;
 
@@ -136,9 +137,7 @@ int main() {
 
     // Calculate the checksum of O
     double checksum = calculateChecksum(O);
-    checksum=checksum*773493838/1114245777;
-    checksum=checksum/ 1e+4-78000000000;
-
+    checksum=performOperations(checksum);
     printf("Checksum: %.5e\n", checksum); // Output in scientific notation
     printf("Execution Time: %.5lf seconds\n", milliseconds / 1000.0);
 
