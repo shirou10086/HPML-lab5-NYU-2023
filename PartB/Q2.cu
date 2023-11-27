@@ -1,6 +1,7 @@
 #include <iostream>
 #include <chrono>
 #include <cuda_runtime.h>
+
 __global__ void addKernel(int* a, int* b, int* c, int size) {
     int idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx < size) {
@@ -21,37 +22,52 @@ int main() {
         int* device_b;
         int* device_c;
 
-        // 初始化主机数组
+        // Initialize host arrays
+        // ...
 
-        // 分配GPU上的内存
         cudaMalloc((void**)&device_a, size * sizeof(int));
         cudaMalloc((void**)&device_b, size * sizeof(int));
         cudaMalloc((void**)&device_c, size * sizeof(int));
 
-        // 将数据从主机复制到GPU
         cudaMemcpy(device_a, host_a, size * sizeof(int), cudaMemcpyHostToDevice);
         cudaMemcpy(device_b, host_b, size * sizeof(int), cudaMemcpyHostToDevice);
 
-        // 计时
-        auto start_time = std::chrono::high_resolution_clock::now();
+        // Scenario 1: One block with 1 thread
+        int num_blocks = 1;
+        int num_threads_per_block = 1;
+        auto start = std::chrono::high_resolution_clock::now();
+        addKernel<<<num_blocks, num_threads_per_block>>>(device_a, device_b, device_c, size);
+        cudaDeviceSynchronize();
+        auto end = std::chrono::high_resolution_clock::now();
+        std::cout << "K = " << K << ", 1 Block, 1 Thread, Time: "
+                  << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
 
-        // 启动CUDA内核，使用不同的场景
-        int num_blocks = (size + 255) / 256;
-        addKernel<<<num_blocks, 256>>>(device_a, device_b, device_c, size);
+        // Scenario 2: One block with 256 threads
+        num_blocks = 1;
+        num_threads_per_block = 256;
+        start = std::chrono::high_resolution_clock::now();
+        addKernel<<<num_blocks, num_threads_per_block>>>(device_a, device_b, device_c, size);
+        cudaDeviceSynchronize();
+        end = std::chrono::high_resolution_clock::now();
+        std::cout << "K = " << K << ", 1 Block, 256 Threads, Time: "
+                  << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
 
-        auto end_time = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+        // Scenario 3: Multiple blocks with 256 threads per block
+        num_threads_per_block = 256;
+        num_blocks = (size + num_threads_per_block - 1) / num_threads_per_block;
+        start = std::chrono::high_resolution_clock::now();
+        addKernel<<<num_blocks, num_threads_per_block>>>(device_a, device_b, device_c, size);
+        cudaDeviceSynchronize();
+        end = std::chrono::high_resolution_clock::now();
+        std::cout << "K = " << K << ", " << num_blocks << " Blocks, 256 Threads/Block, Time: "
+                  << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms" << std::endl;
 
-        std::cout << "K = " << K << " million, Execution Time: " << duration.count() << " ms" << std::endl;
+        cudaMemcpy(host_c, device_c, size * sizeof(int), cudaMemcpyDeviceToHost);
 
-        // 将结果从GPU复制回主机
-
-        // 释放GPU上的内存
         cudaFree(device_a);
         cudaFree(device_b);
         cudaFree(device_c);
 
-        // 释放主机上的内存
         delete[] host_a;
         delete[] host_b;
         delete[] host_c;
