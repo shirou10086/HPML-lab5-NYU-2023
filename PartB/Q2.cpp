@@ -1,5 +1,6 @@
 #include <iostream>
 #include <chrono>
+#include <cuda_runtime.h>  // 包含CUDA运行时头文件
 
 // CUDA内核函数
 __global__ void addKernel(int* a, int* b, int* c, int size) {
