@@ -39,7 +39,7 @@ int main() {
         // addKernel<<<num_blocks, 256>>>(unified_memory, unified_memory, unified_memory, size);
 
         auto end_time = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
 
         std::cout << "Time to execute for K = " << K << " million: " << duration.count() << " ms" << std::endl;
 

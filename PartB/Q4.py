@@ -1,37 +1,37 @@
 import matplotlib.pyplot as plt
+import numpy as np
 
-# Values of K in million
-K_values = [1, 5, 10, 50, 100]
+# Data from your experiments
+K_values = [1, 5, 10, 50, 100]  # K values in millions
+cpu_times = [4, 20, 41, 205, 409]  # CPU times in ms
 
-# Execution times for Q1, Q2, and Q3 (in milliseconds)
-q1_times = [4, 20, 41, 205, 409]
-q2_times = [0, 0, 0, 0, 1]
-q3_times = [0, 0, 0, 0, 0]
+# GPU times without Unified Memory (Step 2)
+gpu_times_step2 = {
+    "1 Block, 1 Thread": [0, 0, 0, 0, 0],
+    "1 Block, 256 Threads": [0, 0, 0, 0, 0],
+    "Multiple Blocks, 256 Threads/Block": [0, 0, 0, 0, 1]
+}
 
-# Create a log-log scale plot for Q1
-plt.figure(figsize=(10, 6))
-plt.plot(K_values, q1_times, marker='o', label='Q1 (Step 2)')
-plt.plot(K_values, q3_times, marker='o', label='Q3 (Step 3 with Unified Memory)')
-plt.yscale('log')
-plt.xscale('log')
-plt.xlabel('K (Million)')
-plt.ylabel('Time (ms)')
-plt.title('Execution Time Comparison (Step 2 vs. Step 3 with Unified Memory)')
-plt.legend()
-plt.grid(True)
-plt.savefig('q4_q1_vs_q3.png')
-plt.show()
+# GPU times with Unified Memory (Step 3)
+gpu_times_step3 = [0, 0, 0, 0, 0]  # All times are 0 ms
 
-# Create a log-log scale plot for Q2
-plt.figure(figsize=(10, 6))
-plt.plot(K_values, q2_times, marker='o', label='Q2 (Step 2 with GPU)')
-plt.plot(K_values, q3_times, marker='o', label='Q3 (Step 3 with Unified Memory)')
-plt.yscale('log')
-plt.xscale('log')
-plt.xlabel('K (Million)')
-plt.ylabel('Time (ms)')
-plt.title('Execution Time Comparison (Step 2 with GPU vs. Step 3 with Unified Memory)')
-plt.legend()
-plt.grid(True)
-plt.savefig('q4_q2_vs_q3.png')
-plt.show()
+# Function to plot the data
+def plot_data(title, cpu_times, gpu_times):
+    plt.figure(figsize=(10, 6))
+    plt.plot(K_values, cpu_times, label='CPU', marker='o')
+
+    for scenario, times in gpu_times.items():
+        plt.plot(K_values, times, label=scenario, marker='o')
+
+    plt.xlabel('K (in millions)')
+    plt.ylabel('Time (ms)')
+    plt.title(title)
+    plt.yscale('log')
+    plt.xscale('log')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+# Plotting the charts
+plot_data('Execution Time without Unified Memory (Step 2)', cpu_times, gpu_times_step2)
+plot_data('Execution Time with Unified Memory (Step 3)', cpu_times, {"Unified Memory": gpu_times_step3})
