@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <chrono>
+#include <cmath> // For pow function
 using namespace std;
 using namespace std::chrono;
 
@@ -40,6 +41,41 @@ __global__ void convolve(double* I0, double* F, double* O) {
             }
         }
         O[k * W * H + idx] = sum;
+    }
+}
+
+void initializeTensors(double* I, double* F, double* I0) {
+    // Initialize I
+    for (int c = 0; c < C; ++c) {
+        for (int x = 0; x < W; ++x) {
+            for (int y = 0; y < H; ++y) {
+                I[c * W * H + x * H + y] = c * (x + y);
+            }
+        }
+    }
+
+    // Initialize F
+    for (int k = 0; k < K; ++k) {
+        for (int c = 0; c < C; ++c) {
+            for (int i = 0; i < FH; ++i) {
+                for (int j = 0; j < FW; ++j) {
+                    F[k * C * FH * FW + c * FH * FW + i * FW + j] = (c + k) * (i + j);
+                }
+            }
+        }
+    }
+
+    // Initialize I0 with padding
+    for (int c = 0; c < C; ++c) {
+        for (int x = 0; x < W + 2 * P; ++x) {
+            for (int y = 0; y < H + 2 * P; ++y) {
+                if (x == 0 || y == 0 || x == W + 2 * P - 1 || y == H + 2 * P - 1) {
+                    I0[c * (W + 2 * P) * (H + 2 * P) + x * (H + 2 * P) + y] = 0;
+                } else {
+                    I0[c * (W + 2 * P) * (H + 2 * P) + x * (H + 2 * P) + y] = I[c * W * H + (x - 1) * H + (y - 1)];
+                }
+            }
+        }
     }
 }
 
@@ -87,8 +123,8 @@ int main() {
 
     // Calculate the checksum of O
     double checksum = calculateChecksum(O);
-    printf("Checksum: %f\n", checksum);
-    printf("Execution Time: %lf seconds\n", milliseconds / 1000.0);
+    printf("Checksum: %.5e\n", checksum); // Output in scientific notation
+    printf("Execution Time: %.5lf seconds\n", milliseconds / 1000.0);
 
     // Free resources
     cudaFree(I);
