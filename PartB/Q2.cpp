@@ -1,8 +1,7 @@
 #include <iostream>
 #include <chrono>
-#include <cuda_runtime.h>
 
-
+// CUDA内核函数
 __global__ void addKernel(int* a, int* b, int* c, int size) {
     int idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx < size) {
@@ -41,16 +40,9 @@ int main() {
         // Profile execution time
         auto start_time = std::chrono::high_resolution_clock::now();
 
-        // Launch the kernel with different scenarios
-        // Scenario 1: Using one block with 1 thread
-        addKernel<<<1, 1>>>(device_a, device_b, device_c, size);
-
-        // Scenario 2: Using one block with 256 threads
-        // addKernel<<<1, 256>>>(device_a, device_b, device_c, size);
-
-        // Scenario 3: Using multiple blocks with 256 threads per block
-        // int num_blocks = (size + 255) / 256;
-        // addKernel<<<num_blocks, 256>>>(device_a, device_b, device_c, size);
+        // 启动CUDA内核函数
+        int num_blocks = (size + 255) / 256; // 计算所需的块数
+        addKernel<<<num_blocks, 256>>>(device_a, device_b, device_c, size);
 
         auto end_time = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
