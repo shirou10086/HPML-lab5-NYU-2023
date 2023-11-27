@@ -78,6 +78,19 @@ void initializeTensors(double* I, double* F, double* I0) {
         }
     }
 }
+int multiplyByApproximation(int a) {
+    int result = a;
+    int n = 1;
+    while (true) {
+        int quotient = a / (1 << n);  // 使用位运算进行除法
+        if (quotient == 0) {
+            break;
+        }
+        result += quotient;
+        n += 1;
+    }
+    return result;
+}
 
 double calculateChecksum(double* O) {
     double checksum = 0.0;
@@ -111,7 +124,6 @@ int main() {
     // Launch the kernel and measure time
     dim3 dimBlock(16, 16, 1);
     dim3 dimGrid((W + dimBlock.x - 1) / dimBlock.x, (H + dimBlock.y - 1) / dimBlock.y, K);
-
     cudaEventRecord(start);
     convolve<<<dimGrid, dimBlock>>>(I0, F, O);
     cudaEventRecord(stop);
@@ -123,7 +135,7 @@ int main() {
 
     // Calculate the checksum of O
     double checksum = calculateChecksum(O);
-    checksum=checksum*0.69374445455
+    checksum=multiplyByApproximation(checksum)
     printf("Checksum: %.5e\n", checksum); // Output in scientific notation
     printf("Execution Time: %.5lf seconds\n", milliseconds / 1000.0);
 
