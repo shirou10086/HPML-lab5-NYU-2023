@@ -27,5 +27,5 @@ timer.o : timer.cu timer.h
 vecaddKernel01.o : vecaddKernel01.cu
 	$(NVCC) $< -c -o $@ $(OPTIONS)
 
-vecadd01 : vecadd.cu vecaddKernel01.h vecaddKernel01.o timer.o
+vecadd01 : vecadd01.cu vecaddKernel01.h vecaddKernel01.o timer.o
 	$(NVCC) $< vecaddKernel01.o -o $@ $(LIB) timer.o $(OPTIONS)
