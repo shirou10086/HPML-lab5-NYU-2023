@@ -99,21 +99,28 @@ int main() {
     // Initialize tensors
     initializeTensors(I, F, I0);
 
-    // Launch the kernel
-    dim3 dimBlock(256);
-    dim3 dimGrid((W * H + dimBlock.x - 1) / dimBlock.x, K);
+    // Create CUDA events for timing
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
 
-    initialize_timer();
-    start_timer();
+    // Launch the kernel and measure time
+    dim3 dimBlock(16, 16, 1);
+    dim3 dimGrid((W + dimBlock.x - 1) / dimBlock.x, (H + dimBlock.y - 1) / dimBlock.y, K);
+
+    cudaEventRecord(start);
     convolve<<<dimGrid, dimBlock>>>(I0, F, O);
-    cudaDeviceSynchronize();
-    stop_timer();
-    double time = elapsed_time();
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    // Calculate the elapsed time
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
 
     // Calculate the checksum of O
     double checksum = calculateChecksum(O);
     printf("Checksum: %f\n", checksum);
-    printf("Execution Time: %lf seconds\n", time);
+    printf("Execution Time: %lf seconds\n", milliseconds / 1000.0);
 
     // Free resources
     cudaFree(I);
