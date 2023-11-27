@@ -1,5 +1,7 @@
 #include <iostream>
 #include <chrono>
+#include <cuda_runtime.h>
+
 
 __global__ void addKernel(int* a, int* b, int* c, int size) {
     int idx = threadIdx.x + blockIdx.x * blockDim.x;
