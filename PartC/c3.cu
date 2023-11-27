@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <time.h>
 #include <cudnn.h>
 
 #define H   1024
@@ -8,7 +7,6 @@
 #define FH  3
 #define FW  3
 #define K   64
-#define ITER 5
 
 #define checkCUDNN(expression)                                  \
 {                                                               \
@@ -85,33 +83,10 @@ int main(int argc, char *argv[]) {
 
     // Perform the convolution
     const double alpha = 1.0, beta = 0.0;
-    for (int i = 0; i < ITER; ++i) {
-        cudaEvent_t start, stop;
-        cudaEventCreate(&start);
-        cudaEventCreate(&stop);
-
-        cudaEventRecord(start);
-        checkCUDNN(cudnnConvolutionForward(cudnn, &alpha, input_descriptor, itg, kernel_descriptor, gpuf, convolution_descriptor, convolution_algorithm, d_workspace, workspace_bytes, &beta, output_descriptor, otg));
-        cudaEventRecord(stop);
-
-        cudaEventSynchronize(stop);
-        float milliseconds = 0;
-        cudaEventElapsedTime(&milliseconds, start, stop);
-        printf("Iteration %d: Convolution execution time: %f milliseconds\n", i, milliseconds);
-
-        cudaEventDestroy(start);
-        cudaEventDestroy(stop);
-    }
+    checkCUDNN(cudnnConvolutionForward(cudnn, &alpha, input_descriptor, itg, kernel_descriptor, gpuf, convolution_descriptor, convolution_algorithm, d_workspace, workspace_bytes, &beta, output_descriptor, otg));
 
     // Copy the output back to host
     cudaMemcpy(ot, otg, K * H * W * sizeof(double), cudaMemcpyDeviceToHost);
-
-    // Calculate checksum
-    double checksum = 0;
-    for (int i = 0; i < K * H * W; ++i) {
-        checksum += ot[i];
-    }
-    printf("Checksum: %lf\n", checksum);
 
     // Cleanup
     cudnnDestroyTensorDescriptor(input_descriptor);

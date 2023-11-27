@@ -3,7 +3,7 @@
 #include <iostream>
 #include <chrono>
 #include <cmath> // For pow function
-#include <c4> // For pow function
+#include "chmath.cu" // For pow function
 using namespace std;
 using namespace std::chrono;
 
