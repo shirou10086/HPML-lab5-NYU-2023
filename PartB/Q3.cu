@@ -1,6 +1,6 @@
 #include <iostream>
 #include <chrono>
-#include <cuda_runtime.h>
+
 __global__ void addKernel(int* a, int* b, int* c, int size) {
     int idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx < size) {
@@ -16,10 +16,10 @@ int main() {
         int size = K * 1000000;
         int* unified_memory;
 
-        // Allocate data in unified memory
-        cudaMallocManaged(&unified_memory, size * sizeof(int));
+        // Allocate unified memory
+        cudaMallocManaged((void**)&unified_memory, size * sizeof(int));
 
-        // Initialize data
+        // Initialize unified memory with random values
         for (int j = 0; j < size; j++) {
             unified_memory[j] = rand();
         }
@@ -29,7 +29,7 @@ int main() {
 
         // Launch the kernel with different scenarios
         // Scenario 1: Using one block with 1 thread
-        // addKernel<<<1, 1>>>(unified_memory, unified_memory, unified_memory, size);
+        addKernel<<<1, 1>>>(unified_memory, unified_memory, unified_memory, size);
 
         // Scenario 2: Using one block with 256 threads
         // addKernel<<<1, 256>>>(unified_memory, unified_memory, unified_memory, size);
@@ -37,8 +37,6 @@ int main() {
         // Scenario 3: Using multiple blocks with 256 threads per block
         // int num_blocks = (size + 255) / 256;
         // addKernel<<<num_blocks, 256>>>(unified_memory, unified_memory, unified_memory, size);
-
-        cudaDeviceSynchronize();
 
         auto end_time = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
