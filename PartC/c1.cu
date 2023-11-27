@@ -1,10 +1,11 @@
+#include <cuda_runtime.h>
+#include <stdio.h>
 #include <iostream>
 #include <chrono>
-#include <cuda_runtime.h>
-
 using namespace std;
 using namespace std::chrono;
 
+// Macro definitions
 #define H 1024
 #define W 1024
 #define C 3
@@ -12,13 +13,20 @@ using namespace std::chrono;
 #define FH 3
 #define K 64
 #define P 1
+#define H_padded (H + 2 * P)
+#define W_padded (W + 2 * P)
+#define H_out (H + 2 * P - FH + 1)
+#define W_out (W + 2 * P - FW + 1)
+#define TILE_WIDTH 16
 
 __global__ void convolve(double* I0, double* F, double* O) {
-    int x = blockIdx.x * blockDim.x + threadIdx.x;
-    int y = blockIdx.y * blockDim.y + threadIdx.y;
-    int k = blockIdx.z * blockDim.z + threadIdx.z;
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int k = blockIdx.y;
 
-    if (x < W && y < H && k < K) {
+    if (idx < W * H) {
+        int x = idx / H;
+        int y = idx % H;
+
         double sum = 0.0;
         for (int c = 0; c < C; ++c) {
             for (int i = 0; i < FW; ++i) {
@@ -28,7 +36,7 @@ __global__ void convolve(double* I0, double* F, double* O) {
                 }
             }
         }
-        O[k * W * H + x * H + y] = sum;
+        O[k * W * H + idx] = sum;
     }
 }
 
@@ -92,21 +100,20 @@ int main() {
     initializeTensors(I, F, I0);
 
     // Launch the kernel
-    dim3 dimBlock(16, 16, 1);
-    dim3 dimGrid((W + dimBlock.x - 1) / dimBlock.x, (H + dimBlock.y - 1) / dimBlock.y, K);
+    dim3 dimBlock(256);
+    dim3 dimGrid((W * H + dimBlock.x - 1) / dimBlock.x, K);
 
-    auto start = high_resolution_clock::now();
+    initialize_timer();
+    start_timer();
     convolve<<<dimGrid, dimBlock>>>(I0, F, O);
     cudaDeviceSynchronize();
-    auto stop = high_resolution_clock::now();
+    stop_timer();
+    double time = elapsed_time();
 
     // Calculate the checksum of O
     double checksum = calculateChecksum(O);
-    cout << "Checksum: " << checksum << endl;
-
-    // Report execution time
-    duration<double> kernelDuration = duration_cast<duration<double>>(stop - start);
-    cout << "Execution Time: " << kernelDuration.count() << " seconds" << endl;
+    printf("Checksum: %f\n", checksum);
+    printf("Execution Time: %lf seconds\n", time);
 
     // Free resources
     cudaFree(I);
